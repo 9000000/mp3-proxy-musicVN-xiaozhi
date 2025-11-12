@@ -1,4 +1,4 @@
-name: Docker Image Build
+name: Docker Build and Push
 
 on:
   push:
@@ -7,15 +7,42 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
+  build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Build mp3-api Docker image
-      run: docker build -t mp3-api-image ./mp3-api
+    - name: Set repository name to lowercase
+      id: repo-name
+      run: echo "repo_name=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-    - name: Build adapter Docker image
-      run: docker build -t adapter-image ./adapter
+    - name: Log in to GitHub Container Registry
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push mp3-api image
+      uses: docker/build-push-action@v4
+      with:
+        context: ./mp3-api
+        push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        tags: |
+          ghcr.io/${{ env.repo_name }}/mp3-api:latest
+          ghcr.io/${{ env.repo_name }}/mp3-api:${{ github.sha }}
+
+    - name: Build and push adapter image
+      uses: docker/build-push-action@v4
+      with:
+        context: ./adapter
+        push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        tags: |
+          ghcr.io/${{ env.repo_name }}/adapter:latest
+          ghcr.io/${{ env.repo_name }}/adapter:${{ github.sha }}
