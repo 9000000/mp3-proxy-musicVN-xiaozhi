@@ -1,0 +1,21 @@
+name: Docker Image Build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Build mp3-api Docker image
+      run: docker build -t mp3-api-image ./mp3-api
+
+    - name: Build adapter Docker image
+      run: docker build -t adapter-image ./adapter
